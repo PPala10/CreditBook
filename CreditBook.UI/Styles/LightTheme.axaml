@@ -1,0 +1,67 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <SolidColorBrush x:Key="PageBrush">#F5F7FB</SolidColorBrush>
+    <SolidColorBrush x:Key="SurfaceBrush">#FFFFFF</SolidColorBrush>
+    <SolidColorBrush x:Key="InkBrush">#1B2942</SolidColorBrush>
+    <SolidColorBrush x:Key="MutedBrush">#5F6E85</SolidColorBrush>
+    <SolidColorBrush x:Key="LineBrush">#E5EAF2</SolidColorBrush>
+    <SolidColorBrush x:Key="AccentBrush">#3867E8</SolidColorBrush>
+  </Styles.Resources>
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource PageBrush}"/>
+    <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+    <Setter Property="FontSize" Value="13"/>
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="16"/>
+    <Setter Property="BoxShadow" Value="0 3 14 0 #050F2542"/>
+  </Style>
+  <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/></Style>
+  <Style Selector="TextBlock.section"><Setter Property="FontSize" Value="16"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+  <Style Selector="TextBlock.caption"><Setter Property="FontSize" Value="11"/><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/></Style>
+  <Style Selector="TextBlock.amount"><Setter Property="FontSize" Value="28"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="MinHeight" Value="38"/>
+    <Setter Property="Padding" Value="14,9"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="Background" Value="White"/>
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+    <Setter Property="Foreground" Value="White"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#2B56CE"/><Setter Property="BorderBrush" Value="#2B56CE"/><Setter Property="TextElement.Foreground" Value="White"/>
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#2348AF"/><Setter Property="TextElement.Foreground" Value="White"/>
+  </Style>
+  <Style Selector="Button.soft"><Setter Property="Background" Value="#EDF2FF"/><Setter Property="BorderBrush" Value="#E3EBFF"/><Setter Property="Foreground" Value="#315AC8"/></Style>
+  <Style Selector="Button.quiet"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/></Style>
+  <Style Selector="Button.danger"><Setter Property="Background" Value="#FFF4F3"/><Setter Property="BorderBrush" Value="#F5DEDC"/><Setter Property="Foreground" Value="#AF4944"/></Style>
+  <Style Selector="Button.small"><Setter Property="MinHeight" Value="30"/><Setter Property="Padding" Value="10,6"/><Setter Property="FontSize" Value="12"/></Style>
+  <Style Selector="TextBox">
+    <Setter Property="MinHeight" Value="40"/><Setter Property="Padding" Value="12,10"/>
+    <Setter Property="CornerRadius" Value="8"/><Setter Property="Background" Value="#F8FAFD"/>
+    <Setter Property="BorderBrush" Value="#DFE6F0"/><Setter Property="SelectionBrush" Value="#CFDEFF"/>
+  </Style>
+  <Style Selector="ComboBox"><Setter Property="MinHeight" Value="40"/><Setter Property="CornerRadius" Value="8"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/></Style>
+  <Style Selector="DatePicker"><Setter Property="MinHeight" Value="40"/><Setter Property="CornerRadius" Value="8"/><Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/></Style>
+  <Style Selector="ListBox"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="0"/></Style>
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="12"/><Setter Property="Margin" Value="0,0,0,6"/>
+    <Setter Property="CornerRadius" Value="10"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#EDF3FF"/><Setter Property="BorderBrush" Value="#D8E4FF"/></Style>
+  <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#F3F6FC"/></Style>
+  <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter"><Setter Property="Background" Value="#E6EEFF"/></Style>
+  <Style Selector="TabItem"><Setter Property="FontSize" Value="13"/><Setter Property="FontWeight" Value="Medium"/><Setter Property="Padding" Value="14,10"/></Style>
+</Styles>

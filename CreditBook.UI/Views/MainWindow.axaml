@@ -1,120 +1,177 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CreditBook.UI.ViewModels"
+        xmlns:conv="using:Avalonia.Data.Converters"
         xmlns:core="clr-namespace:CreditBook.Core;assembly=CreditBook.Core"
         x:Class="CreditBook.UI.Views.MainWindow" x:DataType="vm:MainWindowViewModel"
-        Title="CreditBook — Müşteri hesapları" Width="1100" Height="800" MinWidth="900" MinHeight="650">
-  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20" RowSpacing="12">
-    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
-      <StackPanel>
-        <TextBlock Text="CreditBook" FontSize="24" FontWeight="Bold"/>
-        <TextBlock Text="Yerel müşteri ve tahsilat defteri" Opacity="0.65"/>
-      </StackPanel>
-      <Button Grid.Column="1" Content="Yenile" Command="{Binding RefreshCommand}" VerticalAlignment="Center"/>
-      <Button Grid.Column="2" Content="Yedek al" Click="OnBackupClick" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"/>
-      <Button Grid.Column="3" Command="{Binding ToggleNotificationPanelCommand}" VerticalAlignment="Center">
-        <TextBlock><Run Text="Geciken: "/><Run Text="{Binding NotificationCount}"/></TextBlock>
-      </Button>
-    </Grid>
-    <StackPanel Grid.Row="1" Spacing="4">
-      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3"/>
-      <TextBlock Text="{Binding ErrorMessage}" Foreground="#D64545" TextWrapping="Wrap"/>
-      <TextBlock Text="{Binding InfoMessage}" Foreground="#2E7D32" TextWrapping="Wrap"/>
-    </StackPanel>
-    <Border Grid.Row="2" IsVisible="{Binding IsNotificationPanelOpen}" BorderBrush="Gray" BorderThickness="1" CornerRadius="6" Padding="12" MaxHeight="180">
-      <ScrollViewer><ItemsControl ItemsSource="{Binding Notifications}">
-        <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,4"/></DataTemplate></ItemsControl.ItemTemplate>
-      </ItemsControl></ScrollViewer>
-    </Border>
-    <Grid Grid.Row="3" ColumnDefinitions="280,*" ColumnSpacing="20" IsEnabled="{Binding CanEdit}">
-      <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-        <TextBlock Text="Müşteriler" FontSize="18" FontWeight="SemiBold"/>
-        <TextBox Grid.Row="1" Text="{Binding SearchText}" PlaceholderText="Ad veya telefon ara"/>
-        <ListBox Grid.Row="2" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}">
-          <ListBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
-            <StackPanel Margin="0,4" Spacing="3">
-              <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding Phone}" Opacity="0.6" FontSize="12"/>
-              <TextBlock Text="{Binding Balance, StringFormat='{}{0:N2} ₺'}"/>
-            </StackPanel>
-          </DataTemplate></ListBox.ItemTemplate>
-        </ListBox>
-        <StackPanel Grid.Row="3" Spacing="8">
-          <TextBlock Text="Yeni müşteri" FontWeight="SemiBold"/>
-          <TextBox Text="{Binding NewCustomerName}" PlaceholderText="Ad soyad"/>
-          <TextBox Text="{Binding NewCustomerPhone}" PlaceholderText="Telefon (11 hane)" MaxLength="11"/>
-          <Button Content="Müşteri ekle" Command="{Binding AddCustomerCommand}" HorizontalAlignment="Stretch"/>
-          <TextBlock Text="İşlem geçmişi olan müşteriler kaldırılamaz." FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
+        Title="CreditBook — Müşteri hesapları" Width="1200" Height="900" MinWidth="980" MinHeight="740">
+  <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <!-- A quiet application bar keeps the ledger itself in focus. -->
+    <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="28,18">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Border Background="{StaticResource AccentBrush}" CornerRadius="11" Width="42" Height="42">
+            <TextBlock Text="CB" Foreground="White" FontWeight="SemiBold" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <StackPanel Spacing="2"><TextBlock Text="CreditBook" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="İşletmenizin hesap defteri" Classes="caption"/></StackPanel>
         </StackPanel>
+        <Button Grid.Column="1" Classes="quiet" Content="Yenile" Command="{Binding RefreshCommand}" VerticalAlignment="Center"/>
+        <Button Grid.Column="2" Content="Yedek al" Click="OnBackupClick" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"/>
+        <Button Grid.Column="3" Command="{Binding ToggleNotificationPanelCommand}" VerticalAlignment="Center" Background="#FFF8EB" BorderBrush="#F5E8C9" Foreground="#916316">
+          <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Geciken borçlar"/><Border Background="#F9E8BE" CornerRadius="5" Padding="6,1"><TextBlock Text="{Binding NotificationCount}" FontSize="11" FontWeight="SemiBold"/></Border></StackPanel>
+        </Button>
       </Grid>
-      <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Spacing="5">
-            <TextBlock Text="{Binding SelectedCustomer.Name, TargetNullValue='Bir müşteri seçin'}" FontSize="22" FontWeight="SemiBold"/>
-            <TextBlock><Run Text="Kişisel bakiye: "/><Run Text="{Binding TotalDebtOfSelectedCustomer, StringFormat='{}{0:N2} ₺'}" FontWeight="Bold"/></TextBlock>
-            <TextBlock Opacity="0.7"><Run Text="Aile toplamı (kişi + doğrudan yakınlar): "/><Run Text="{Binding FamilyTotalDebt, StringFormat='{}{0:N2} ₺'}"/></TextBlock>
-            <TextBlock><Run Text="Ödeme geçmişi puanı: "/><Run Text="{Binding SelectedCustomer.Score}"/></TextBlock>
-            <TextBlock Text="Bu müşterinin ödeme geçmişi puanı düşük." IsVisible="{Binding SelectedCustomerHasLowScore}" Foreground="#D64545"/>
-          </StackPanel>
-          <Button Grid.Column="1" Content="Müşteriyi kaldır" VerticalAlignment="Top" Command="{Binding ArchiveCustomerCommand}" CommandParameter="{Binding SelectedCustomer}"/>
-        </Grid>
-        <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" CornerRadius="6" Padding="12">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <StackPanel Spacing="4"><TextBlock Text="Tahsilat kaydet" FontWeight="SemiBold"/><TextBox Text="{Binding NewPaymentAmount}" PlaceholderText="Tutar (₺, ör. 125,50)"/><TextBlock Text="Ödeme en eski açık borçlardan düşülür." FontSize="11" Opacity="0.65"/></StackPanel>
-            <Button Grid.Column="1" Content="Tahsil et" Command="{Binding RecordPaymentCommand}" VerticalAlignment="Center"/>
+    </Border>
+    <StackPanel Grid.Row="1" Margin="28,0" Spacing="3">
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3"/>
+      <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" Foreground="#B44943" TextWrapping="Wrap" FontSize="12"/>
+      <TextBlock Text="{Binding InfoMessage}" IsVisible="{Binding InfoMessage, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}" Foreground="#2F8061" TextWrapping="Wrap" FontSize="12"/>
+    </StackPanel>
+    <Border Grid.Row="2" IsVisible="{Binding IsNotificationPanelOpen}" Background="#FFFBF2" BorderBrush="#F0E1BC" BorderThickness="1" CornerRadius="12" Padding="16" Margin="28,8,28,0" MaxHeight="160">
+      <Grid RowDefinitions="Auto,*" RowSpacing="8">
+        <TextBlock Text="30 günü geçen açık borçlar" FontWeight="SemiBold" Foreground="#916316"/>
+        <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding Notifications}">
+          <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,4" Foreground="#7E683D"/></DataTemplate></ItemsControl.ItemTemplate>
+        </ItemsControl></ScrollViewer>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="3" ColumnDefinitions="290,*" ColumnSpacing="24" Margin="28,18,28,24" IsEnabled="{Binding CanEdit}">
+      <!-- Customer directory. -->
+      <Border Classes="card">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <Grid Margin="20,22,20,14" ColumnDefinitions="*,Auto">
+            <TextBlock Text="Müşteriler" Classes="section"/>
+            <Border Grid.Column="1" CornerRadius="6" Background="#F0F3F9" Padding="8,3"><TextBlock Text="{Binding Customers.Count}" FontSize="11" Foreground="#5F6E85"/></Border>
           </Grid>
-        </Border>
-        <TabControl Grid.Row="2">
-          <TabItem Header="Borçlar">
-            <Grid RowDefinitions="*,Auto" RowSpacing="10" Margin="0,10,0,0">
-              <ListBox ItemsSource="{Binding Debts}">
-                <ListBox.ItemTemplate><DataTemplate x:DataType="vm:DebtItemViewModel">
-                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,6">
-                    <StackPanel Spacing="3">
-                      <TextBlock Text="{Binding Description, TargetNullValue='Borç kaydı'}" FontWeight="SemiBold"/>
-                      <TextBlock><Run Text="İlk tutar: "/><Run Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}"/><Run Text=" · Kalan: "/><Run Text="{Binding Outstanding, StringFormat='{}{0:N2} ₺'}" FontWeight="Bold"/></TextBlock>
-                      <TextBlock Opacity="0.6" FontSize="12"><Run Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy}'}"/><Run Text=" · "/><Run Text="{Binding Status}"/></TextBlock>
-                    </StackPanel>
-                    <Button Grid.Column="1" Content="Kapat" IsEnabled="{Binding CanSettle}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SettleDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
-                    <Button Grid.Column="2" Content="İptal" IsEnabled="{Binding CanVoid}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).VoidDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
-                  </Grid>
-                </DataTemplate></ListBox.ItemTemplate>
-              </ListBox>
-              <StackPanel Grid.Row="1" Spacing="6">
-                <TextBlock Text="Yeni borç" FontWeight="SemiBold"/>
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="8"><TextBox Text="{Binding NewDebtAmount}" PlaceholderText="Tutar (₺, ör. 125,50)"/><TextBox Grid.Column="1" Text="{Binding NewDebtDescription}" PlaceholderText="Açıklama"/></Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><DatePicker SelectedDate="{Binding NewDebtDate}"/><Button Grid.Column="1" Content="Borç ekle" Command="{Binding AddDebtCommand}"/></Grid>
-              </StackPanel>
-            </Grid>
-          </TabItem>
-          <TabItem Header="Tahsilat geçmişi">
-            <ListBox ItemsSource="{Binding Payments}" Margin="0,10,0,0">
-              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:PaymentItemViewModel">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,5">
-                  <StackPanel Spacing="3"><TextBlock Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" FontWeight="SemiBold"/><TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"/><TextBlock Text="{Binding Status}" Opacity="0.65"/></StackPanel>
-                  <Button Grid.Column="1" Content="Tahsilatı geri al" IsEnabled="{Binding CanReverse}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReversePaymentCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
-                </Grid>
-              </DataTemplate></ListBox.ItemTemplate>
-            </ListBox>
-          </TabItem>
-          <TabItem Header="Yakınlar">
-            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Margin="0,10,0,0">
-              <TextBlock Text="Yakınların bakiyeleri kişisel hesaba eklenmez; aile toplamında ayrıca gösterilir." TextWrapping="Wrap" Opacity="0.65"/>
-              <ItemsControl Grid.Row="1" ItemsSource="{Binding Relatives}">
-                <ItemsControl.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
-                  <Grid ColumnDefinitions="*,Auto" Margin="0,6"><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Balance, StringFormat='{}{0:N2} ₺'}"/></StackPanel>
-                    <Button Grid.Column="1" Content="Bağı kaldır" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveRelativeCommand}" CommandParameter="{Binding}"/>
-                  </Grid>
-                </DataTemplate></ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <ComboBox ItemsSource="{Binding AvailableRelativeOptions}" SelectedItem="{Binding SelectedRelativeToAdd}" PlaceholderText="Yakın seçin" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
-                <Button Grid.Column="1" Content="Yakın ekle" Command="{Binding AddRelativeCommand}"/>
+          <TextBox Grid.Row="1" Margin="16,0,16,16" Text="{Binding SearchText}" PlaceholderText="Ad veya telefon ara"/>
+          <ListBox Grid.Row="2" Margin="8,0" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}">
+            <ListBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
+              <Grid ColumnDefinitions="36,*" ColumnSpacing="10">
+                <Border Width="36" Height="36" CornerRadius="12" Background="#E8EEF9" VerticalAlignment="Top">
+                  <PathIcon Width="18" Height="18" Foreground="#7588AE" Data="M12,2 A4,4 0 1 1 12,10 A4,4 0 1 1 12,2 M4,22 V19 A8,8 0 0 1 20,19 V22 Z"/>
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                  <TextBlock Text="{Binding Phone}" FontSize="11" Foreground="#5B6B84"/>
+                  <TextBlock Text="{Binding Balance, StringFormat='{}{0:N2} ₺'}" FontSize="12" Foreground="#3867B4" FontWeight="Medium"/>
+                </StackPanel>
               </Grid>
+            </DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+          <Border Grid.Row="3" Background="#FAFBFE" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" CornerRadius="0,0,16,16" Padding="20,18">
+            <StackPanel Spacing="9">
+              <TextBlock Text="Yeni müşteri" FontWeight="SemiBold" Margin="0,0,0,3"/>
+              <TextBox Text="{Binding NewCustomerName}" PlaceholderText="Ad soyad" Background="White"/>
+              <TextBox Text="{Binding NewCustomerPhone}" PlaceholderText="Telefon numarası" MaxLength="11" Background="White"/>
+              <Button Classes="primary" Content="＋  Müşteri ekle" Command="{Binding AddCustomerCommand}" HorizontalAlignment="Stretch" Margin="0,3,0,0"/>
+              <TextBlock Text="Telefon numarasını 11 hane olarak girin." Classes="caption" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+      <!-- The account workspace scrolls independently at smaller window sizes. -->
+      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="18" Margin="0,0,4,4">
+          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
+            <StackPanel Spacing="5">
+              <TextBlock Text="MÜŞTERİ HESABI" FontSize="10" FontWeight="SemiBold" Foreground="#5F6E85"/>
+              <TextBlock Text="{Binding SelectedCustomer.Name, TargetNullValue='Hesap defterinize hoş geldiniz'}" FontSize="27" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="Borçları, tahsilatları ve yakın hesaplarını tek yerden yönetin." Classes="muted" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="quiet small" Content="Hesabı kaldır" Command="{Binding ArchiveCustomerCommand}" CommandParameter="{Binding SelectedCustomer}" VerticalAlignment="Top" Margin="10,18,0,0" ToolTip.Tip="Yalnızca işlem geçmişi olmayan müşteri hesapları kaldırılabilir."/>
+          </Grid>
+          <Grid ColumnDefinitions="1.2*,*,*" ColumnSpacing="12">
+            <Border CornerRadius="14" Background="#EDF3FF" BorderBrush="#DCE6FB" BorderThickness="1" Padding="18">
+              <StackPanel Spacing="8"><TextBlock Text="Kişisel bakiye" Foreground="#4B6693" FontSize="12"/><TextBlock Text="{Binding TotalDebtOfSelectedCustomer, StringFormat='{}{0:N2} ₺'}" Classes="amount" Foreground="#2D54A0" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding TotalDebtOfSelectedCustomer, StringFormat='{}{0:N2} ₺'}"/><TextBlock Text="Müşterinin kalan borcu" FontSize="10" Foreground="#4B6693"/></StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card" Padding="18">
+              <StackPanel Spacing="8"><TextBlock Text="Aile toplamı" Classes="muted" FontSize="12"/><TextBlock Text="{Binding FamilyTotalDebt, StringFormat='{}{0:N2} ₺'}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FamilyTotalDebt, StringFormat='{}{0:N2} ₺'}" FontSize="25" FontWeight="SemiBold"/><TextBlock Text="Kişi ve doğrudan yakınları" Classes="caption" FontSize="10"/></StackPanel>
+            </Border>
+            <Border Grid.Column="2" CornerRadius="14" Background="#EFF9F4" BorderBrush="#DDEFE5" BorderThickness="1" Padding="18">
+              <StackPanel Spacing="7">
+                <TextBlock Text="Ödeme geçmişi puanı" FontSize="12" Foreground="#4C715F"/>
+                <TextBlock><Run Text="{Binding SelectedCustomer.Score, TargetNullValue='—'}" FontSize="25" FontWeight="SemiBold" Foreground="#347657"/><Run Text=" / 100" FontSize="12" Foreground="#4C715F"/></TextBlock>
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding SelectedCustomer.Score}" MinWidth="0" Height="4" CornerRadius="2" Foreground="#6CB88A" Background="#DBEEE2" Margin="0,4,0,2"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+          <Border IsVisible="{Binding SelectedCustomerHasLowScore}" CornerRadius="10" Background="#FFF4EF" Padding="14,10">
+            <TextBlock Text="Bu müşterinin ödeme geçmişi puanı düşük. Yeni borç eklemeden önce hesabı kontrol edin." Foreground="#AD604A" FontSize="12" TextWrapping="Wrap"/>
+          </Border>
+          <Border Classes="card" Padding="20,17">
+            <Grid ColumnDefinitions="*,210,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="5" VerticalAlignment="Center"><TextBlock Text="Tahsilat kaydet" FontWeight="SemiBold" FontSize="15"/><TextBlock Text="En eski açık borçtan düşülür." Classes="caption"/></StackPanel>
+              <TextBox Grid.Column="1" Text="{Binding NewPaymentAmount}" PlaceholderText="Tutar · ₺" VerticalAlignment="Center" ToolTip.Tip="Ondalık için virgül kullanın. Örnek: 125,50"/>
+              <Button Grid.Column="2" Classes="primary" Content="Tahsil et  →" Command="{Binding RecordPaymentCommand}" VerticalAlignment="Center" MinWidth="110"/>
             </Grid>
-          </TabItem>
-        </TabControl>
-      </Grid>
+          </Border>
+          <Border Classes="card" Padding="20,12,20,20">
+            <TabControl>
+              <TabItem Header="Borçlar">
+                <StackPanel Spacing="14" Margin="0,16,0,0">
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Borç hareketleri" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Classes="caption"><Run Text="{Binding Debts.Count}"/><Run Text=" kayıt"/></TextBlock></Grid>
+                  <ListBox ItemsSource="{Binding Debts}" MinHeight="110" MaxHeight="180">
+                    <ListBox.ItemTemplate><DataTemplate x:DataType="vm:DebtItemViewModel">
+                      <Border BorderBrush="#EDF0F6" BorderThickness="0,0,0,1" Padding="0,2,0,12">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                          <StackPanel Spacing="7">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock Text="{Binding Description, TargetNullValue='Borç kaydı'}" ToolTip.Tip="{Binding Description}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><Border Grid.Column="1" Background="#F0F3F8" CornerRadius="4" Padding="7,2"><TextBlock Text="{Binding Status}" FontSize="10" Foreground="#5B6B84"/></Border></Grid>
+                            <TextBlock FontSize="12"><Run Text="Kalan "/><Run Text="{Binding Outstanding, StringFormat='{}{0:N2} ₺'}" FontWeight="SemiBold"/><Run Text="   /   "/><Run Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" Foreground="#5B6B84"/></TextBlock>
+                            <TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy}'}" Classes="caption" FontSize="10"/>
+                          </StackPanel>
+                          <Button Grid.Column="1" Classes="soft small" Content="Kapat" IsEnabled="{Binding CanSettle}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SettleDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                          <Button Grid.Column="2" Classes="quiet small" Content="İptal" IsEnabled="{Binding CanVoid}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).VoidDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                        </Grid>
+                      </Border>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                  <Border Background="#F8FAFD" BorderBrush="#E9EDF5" BorderThickness="1" CornerRadius="10" Padding="16">
+                    <StackPanel Spacing="10">
+                      <TextBlock Text="Yeni borç ekle" FontWeight="SemiBold" FontSize="12"/>
+                      <Grid ColumnDefinitions="160,*" ColumnSpacing="10"><TextBox Text="{Binding NewDebtAmount}" PlaceholderText="Tutar · ₺" Background="White"/><TextBox Grid.Column="1" Text="{Binding NewDebtDescription}" PlaceholderText="Açıklama (isteğe bağlı)" Background="White"/></Grid>
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><DatePicker SelectedDate="{Binding NewDebtDate}"/><Button Grid.Column="1" Classes="primary" Content="＋  Borç ekle" Command="{Binding AddDebtCommand}"/></Grid>
+                    </StackPanel>
+                  </Border>
+                  <TextBlock Text="Tutarları 125,50 biçiminde girin. Kapanan kayıtlar hesap geçmişinde korunur." Classes="caption" FontSize="10" TextWrapping="Wrap"/>
+                </StackPanel>
+              </TabItem>
+              <TabItem Header="Tahsilat geçmişi">
+                <StackPanel Spacing="14" Margin="0,16,0,0">
+                  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Tahsilat hareketleri" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Classes="caption"><Run Text="{Binding Payments.Count}"/><Run Text=" kayıt"/></TextBlock></Grid>
+                  <ListBox ItemsSource="{Binding Payments}" MinHeight="180" MaxHeight="360">
+                    <ListBox.ItemTemplate><DataTemplate x:DataType="vm:PaymentItemViewModel">
+                      <Border BorderBrush="#EDF0F6" BorderThickness="0,0,0,1" Padding="0,4,0,14">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <StackPanel Spacing="6"><TextBlock Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" FontSize="18" FontWeight="SemiBold" Foreground="#347657"/><TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy · HH:mm}'}" Classes="caption"/><TextBlock Text="{Binding Status}" FontSize="11" Foreground="#5F6E85"/></StackPanel>
+                          <Button Grid.Column="1" Classes="quiet small" Content="Tahsilatı geri al" IsEnabled="{Binding CanReverse}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReversePaymentCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                        </Grid>
+                      </Border>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                  <TextBlock Text="Geri alınan tahsilatlar silinmez; tarihçesi korunur ve bakiye yeniden hesaplanır." Classes="caption" TextWrapping="Wrap"/>
+                </StackPanel>
+              </TabItem>
+              <TabItem Header="Yakın hesapları">
+                <StackPanel Spacing="16" Margin="0,16,0,0">
+                  <TextBlock Text="Yakınların kişisel hesapları ayrı tutulur. Bakiyeleri aile toplamında birlikte gösterilir." Classes="muted" FontSize="12" TextWrapping="Wrap"/>
+                  <ScrollViewer MaxHeight="280"><ItemsControl ItemsSource="{Binding Relatives}">
+                    <ItemsControl.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
+                      <Border Background="#F8FAFD" CornerRadius="10" Padding="14" Margin="0,0,0,8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><StackPanel Spacing="6"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Balance, StringFormat='{}{0:N2} ₺'}" Foreground="#58719C"/></StackPanel><Button Grid.Column="1" Classes="quiet small" Content="Bağı kaldır" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveRelativeCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/></Grid>
+                      </Border>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                  </ItemsControl></ScrollViewer>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <ComboBox ItemsSource="{Binding AvailableRelativeOptions}" SelectedItem="{Binding SelectedRelativeToAdd}" PlaceholderText="Bağlanacak müşteriyi seçin" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                    <Button Grid.Column="1" Classes="soft" Content="Yakın ekle" Command="{Binding AddRelativeCommand}"/>
+                  </Grid>
+                </StackPanel>
+              </TabItem>
+            </TabControl>
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="7" Margin="3,0,0,0"><Border Background="#73A88A" Width="6" Height="6" CornerRadius="3" VerticalAlignment="Center"/><TextBlock Text="Kayıtlarınız bu cihazda saklanır." Classes="caption" FontSize="10"/></StackPanel>
+        </StackPanel>
+      </ScrollViewer>
     </Grid>
   </Grid>
 </Window>

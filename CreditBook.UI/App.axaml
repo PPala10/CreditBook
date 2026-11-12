@@ -2,14 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="CreditBook.UI.App"
              xmlns:local="using:CreditBook.UI"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
-
-    <Application.DataTemplates>
-        <local:ViewLocator/>
-    </Application.DataTemplates>
-  
-    <Application.Styles>
-        <FluentTheme />
-    </Application.Styles>
+             Name="CreditBook" RequestedThemeVariant="Light">
+  <Application.DataTemplates><local:ViewLocator/></Application.DataTemplates>
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes><ColorPaletteResources x:Key="Light" Accent="#3867E8"/></FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://CreditBook.UI/Styles/LightTheme.axaml"/>
+  </Application.Styles>
 </Application>
