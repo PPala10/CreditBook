@@ -1,3 +1,6 @@
 <Solution>
+  <Project Path="CreditBook.Core/CreditBook.Core.csproj" />
+  <Project Path="CreditBook.Storage/CreditBook.Storage.csproj" />
   <Project Path="CreditBook.UI/CreditBook.UI.csproj" />
+  <Project Path="CreditBook.Tests/CreditBook.Tests.csproj" />
 </Solution>

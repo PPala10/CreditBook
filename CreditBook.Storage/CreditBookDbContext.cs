@@ -1,15 +1,17 @@
 using System;
 using System.IO;
 using Microsoft.EntityFrameworkCore;
-using CreditBook.UI.Models;
+using CreditBook.Core;
 
-namespace CreditBook.UI.Data;
+namespace CreditBook.Storage;
 
 public class CreditBookDbContext : DbContext
 {
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<DebtRecord> DebtRecords => Set<DebtRecord>();
     public DbSet<CustomerRelative> CustomerRelatives => Set<CustomerRelative>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
 
     public CreditBookDbContext()
     {
@@ -31,6 +33,10 @@ public class CreditBookDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<DebtRecord>().Ignore(d => d.Outstanding);
+        modelBuilder.Entity<Payment>().HasOne(p => p.Customer).WithMany().HasForeignKey(p => p.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<PaymentAllocation>().HasOne(a => a.Payment).WithMany(p => p.Allocations).HasForeignKey(a => a.PaymentId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<PaymentAllocation>().HasOne(a => a.DebtRecord).WithMany(d => d.Allocations).HasForeignKey(a => a.DebtRecordId).OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Customer>()
             .HasMany(c => c.Debts)
@@ -51,8 +57,10 @@ public class CreditBookDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
     }
 
-    private static string GetDatabasePath()
+    public static string GetDatabasePath()
     {
+        var overridePath = Environment.GetEnvironmentVariable("CREDITBOOK_DB_PATH");
+        if (!string.IsNullOrWhiteSpace(overridePath)) return Path.GetFullPath(overridePath);
         var applicationDataFolder = Environment.GetFolderPath(
             Environment.SpecialFolder.ApplicationData);
         var databaseFolder = Path.Combine(applicationDataFolder, "CreditBook");

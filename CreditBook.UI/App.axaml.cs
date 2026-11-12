@@ -1,8 +1,5 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
-using Avalonia.Data.Core.Plugins;
-using System.Linq;
 using Avalonia.Markup.Xaml;
 using CreditBook.UI.ViewModels;
 using CreditBook.UI.Views;
@@ -22,7 +19,7 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(),
+                DataContext = new MainWindowViewModel(() => new CreditBook.Storage.Ledger(CreditBook.Storage.CreditBookDbContext.GetDatabasePath())),
             };
         }
 

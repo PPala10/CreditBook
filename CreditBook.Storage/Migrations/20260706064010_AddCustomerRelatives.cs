@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CreditBook.UI.Migrations
+namespace CreditBook.Storage.Migrations
 {
     /// <inheritdoc />
     public partial class AddCustomerRelatives : Migration

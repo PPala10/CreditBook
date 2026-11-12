@@ -1,213 +1,120 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:CreditBook.UI.ViewModels"
-        xmlns:models="using:CreditBook.UI.Models"
-        x:Class="CreditBook.UI.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Title="CreditBook"
-        Width="900" Height="700">
-
-    <Panel>
-
-        <!-- ANA İÇERİK -->
-        <Grid ColumnDefinitions="300,*" Margin="10">
-
-            <!-- LEFT PANEL: Customers -->
-            <DockPanel Grid.Column="0" Margin="0,0,10,0">
-
-                <TextBlock DockPanel.Dock="Top" Text="Customers" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
-
-                <TextBox DockPanel.Dock="Top" PlaceholderText="Search customer..."
-                         Text="{Binding SearchText}" Margin="0,0,0,10"/>
-
-                <!-- Add customer form + relatives management -->
-                <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" Spacing="5">
-
-                    <TextBlock Text="{Binding CustomerFormError}" Foreground="Red" FontSize="11"/>
-
-                    <TextBox PlaceholderText="Customer name" Text="{Binding NewCustomerName}"/>
-                    <TextBox PlaceholderText="Phone (11 digits)" Text="{Binding NewCustomerPhone}" MaxLength="11"/>
-                    <Button Content="Add Customer" Command="{Binding AddCustomerCommand}"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-
-                    <Separator Margin="0,5"/>
-
-                    <TextBlock Text="Relatives" FontWeight="Bold" FontSize="13"/>
-
-                    <ItemsControl ItemsSource="{Binding Relatives}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="models:Customer">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
-                                        <TextBlock Text="{Binding Phone}" FontSize="11" Foreground="Gray"/>
-                                        <TextBlock FontSize="11" FontWeight="SemiBold">
-                                            <Run Text="Puan: "/>
-                                            <Run Text="{Binding Score}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="✕"
-                                            Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteCustomerCommand}"
-                                            CommandParameter="{Binding}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <ComboBox ItemsSource="{Binding AvailableRelativeOptions}"
-                              SelectedItem="{Binding SelectedRelativeToAdd}"
-                              PlaceholderText="Select a relative"
-                              HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate DataType="models:Customer">
-                                <TextBlock Text="{Binding Name}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <Button Content="Add Relative" Command="{Binding AddRelativeCommand}"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-                </StackPanel>
-
-                <ListBox ItemsSource="{Binding Customers}"
-                         SelectedItem="{Binding SelectedCustomer}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate DataType="models:Customer">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding Phone}" FontSize="11" Foreground="Gray"/>
-                                    <TextBlock FontSize="11" FontWeight="SemiBold">
-                                        <Run Text="Puan: "/>
-                                        <Run Text="{Binding Score}"/>
-                                    </TextBlock>
-                                </StackPanel>
-                                <Button Grid.Column="1" Content="✕"
-                                        Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteCustomerCommand}"
-                                        CommandParameter="{Binding}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-
-            <!-- RIGHT PANEL: Debts -->
-            <DockPanel Grid.Column="1">
-
-                <TextBlock DockPanel.Dock="Top" FontSize="18" FontWeight="Bold" Margin="0,0,0,10">
-                    <Run Text="Debts"/>
-                    <Run Text=" - "/>
-                    <Run Text="{Binding SelectedCustomer.Name}"/>
-                </TextBlock>
-
-                <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10" FontSize="14">
-                    <Run Text="Total Outstanding: "/>
-                    <Run Text="{Binding TotalDebtOfSelectedCustomer}" FontWeight="Bold"/>
-                </TextBlock>
-                <Border DockPanel.Dock="Top" Background="#FFEBEE" CornerRadius="4" Padding="8" Margin="0,0,0,10"
-                        IsVisible="{Binding SelectedCustomerHasLowScore}">
-                    <TextBlock Foreground="#C62828" FontWeight="Bold" FontSize="12">
-                        <Run Text="⚠ Uyarı: Bu müşterinin puanı düşük ("/>
-                        <Run Text="{Binding SelectedCustomer.Score}"/>
-                        <Run Text=")"/>
-                    </TextBlock>
-                </Border>
-                
-                <!-- Add debt form -->
-                <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" Spacing="5">
-                    <TextBox PlaceholderText="Amount" Text="{Binding NewDebtAmount}"/>
-                    <TextBox PlaceholderText="Description (optional)" Text="{Binding NewDebtDescription}"/>
-                    <DatePicker SelectedDate="{Binding NewDebtDate}" HorizontalAlignment="Stretch"/>
-                    <Button Content="Add Debt" Command="{Binding AddDebtCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-                </StackPanel>
-
-                <ListBox ItemsSource="{Binding Debts}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate DataType="vm:DebtItemViewModel">
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="0,3">
-                                <CheckBox Grid.Column="0"
-                                          IsChecked="{Binding IsPaid, Mode=OneWay}"
-                                          Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).TogglePaidCommand}"
-                                          CommandParameter="{Binding}"/>
-
-                                <StackPanel Grid.Column="1" Margin="10,0">
-                                    <TextBlock Text="{Binding OwnerName}" FontSize="10" Foreground="SteelBlue"/>
-                                    <TextBlock Text="{Binding Amount}" FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray"/>
-                                </StackPanel>
-
-                                <TextBlock Grid.Column="2" Text="{Binding Date, StringFormat=\{0:dd.MM.yyyy\}}"
-                                           VerticalAlignment="Center" Margin="10,0"/>
-
-                                <TextBox Grid.Column="3" Width="70" PlaceholderText="Miktar"
-                                         Text="{Binding PaymentAmount}" Margin="10,0"/>
-
-                                <Button Grid.Column="4" Content="Öde"
-                                        Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).ReduceDebtCommand}"
-                                        CommandParameter="{Binding}"/>
-
-                                <Button Grid.Column="5" Content="Sil" Margin="5,0,0,0"
-                                        Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteDebtCommand}"
-                                        CommandParameter="{Binding}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-
-        </Grid>
-        
-        <!-- YEDEKLEME BUTONU -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
-                    Margin="0,15,55,0" Spacing="10">
-            <TextBlock Text="{Binding BackupStatusMessage}" FontSize="10"
-                       Foreground="Green" VerticalAlignment="Center" MaxWidth="200" TextWrapping="Wrap"/>
-            <Button Content="Yedek Al" Click="OnBackupClick"/>
+        xmlns:core="clr-namespace:CreditBook.Core;assembly=CreditBook.Core"
+        x:Class="CreditBook.UI.Views.MainWindow" x:DataType="vm:MainWindowViewModel"
+        Title="CreditBook — Müşteri hesapları" Width="1100" Height="800" MinWidth="900" MinHeight="650">
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20" RowSpacing="12">
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+      <StackPanel>
+        <TextBlock Text="CreditBook" FontSize="24" FontWeight="Bold"/>
+        <TextBlock Text="Yerel müşteri ve tahsilat defteri" Opacity="0.65"/>
+      </StackPanel>
+      <Button Grid.Column="1" Content="Yenile" Command="{Binding RefreshCommand}" VerticalAlignment="Center"/>
+      <Button Grid.Column="2" Content="Yedek al" Click="OnBackupClick" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"/>
+      <Button Grid.Column="3" Command="{Binding ToggleNotificationPanelCommand}" VerticalAlignment="Center">
+        <TextBlock><Run Text="Geciken: "/><Run Text="{Binding NotificationCount}"/></TextBlock>
+      </Button>
+    </Grid>
+    <StackPanel Grid.Row="1" Spacing="4">
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3"/>
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="#D64545" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding InfoMessage}" Foreground="#2E7D32" TextWrapping="Wrap"/>
+    </StackPanel>
+    <Border Grid.Row="2" IsVisible="{Binding IsNotificationPanelOpen}" BorderBrush="Gray" BorderThickness="1" CornerRadius="6" Padding="12" MaxHeight="180">
+      <ScrollViewer><ItemsControl ItemsSource="{Binding Notifications}">
+        <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,4"/></DataTemplate></ItemsControl.ItemTemplate>
+      </ItemsControl></ScrollViewer>
+    </Border>
+    <Grid Grid.Row="3" ColumnDefinitions="280,*" ColumnSpacing="20" IsEnabled="{Binding CanEdit}">
+      <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+        <TextBlock Text="Müşteriler" FontSize="18" FontWeight="SemiBold"/>
+        <TextBox Grid.Row="1" Text="{Binding SearchText}" PlaceholderText="Ad veya telefon ara"/>
+        <ListBox Grid.Row="2" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}">
+          <ListBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
+            <StackPanel Margin="0,4" Spacing="3">
+              <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding Phone}" Opacity="0.6" FontSize="12"/>
+              <TextBlock Text="{Binding Balance, StringFormat='{}{0:N2} ₺'}"/>
+            </StackPanel>
+          </DataTemplate></ListBox.ItemTemplate>
+        </ListBox>
+        <StackPanel Grid.Row="3" Spacing="8">
+          <TextBlock Text="Yeni müşteri" FontWeight="SemiBold"/>
+          <TextBox Text="{Binding NewCustomerName}" PlaceholderText="Ad soyad"/>
+          <TextBox Text="{Binding NewCustomerPhone}" PlaceholderText="Telefon (11 hane)" MaxLength="11"/>
+          <Button Content="Müşteri ekle" Command="{Binding AddCustomerCommand}" HorizontalAlignment="Stretch"/>
+          <TextBlock Text="İşlem geçmişi olan müşteriler kaldırılamaz." FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
         </StackPanel>
-
-        <!-- BİLDİRİM ÇANI (sağ üst köşe) -->
-        <Button HorizontalAlignment="Right" VerticalAlignment="Top"
-                Margin="0,10,15,0"
-                Command="{Binding ToggleNotificationPanelCommand}"
-                Background="Transparent" BorderThickness="0">
-            <Grid>
-                <TextBlock Text="🔔" FontSize="22"/>
-                <Border Background="Red" CornerRadius="8"
-                        Width="16" Height="16"
-                        HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Margin="0,-5,-5,0"
-                        IsVisible="{Binding HasUnreadNotifications}">
-                    <TextBlock Text="{Binding UnreadNotificationCount}"
-                               FontSize="10" Foreground="White"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-            </Grid>
-        </Button>
-
-        <!-- BİLDİRİM PANELİ -->
-        <Border IsVisible="{Binding IsNotificationPanelOpen}"
-                HorizontalAlignment="Right" VerticalAlignment="Top"
-                Margin="0,45,15,0"
-                Width="320" MaxHeight="400"
-                Background="White" BorderBrush="Gray" BorderThickness="1"
-                CornerRadius="6" Padding="10">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Notifications" FontWeight="Bold" 
-                           Foreground="Black" Margin="0,0,0,10"/>
-
-                <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding Notifications}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="x:String">
-                                <Border Background="#F5F5F5" CornerRadius="4" Padding="8" Margin="0,3">
-                                    <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"
-                                               Foreground="#222222" FontWeight="SemiBold"/>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </DockPanel>
+      </Grid>
+      <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="12">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{Binding SelectedCustomer.Name, TargetNullValue='Bir müşteri seçin'}" FontSize="22" FontWeight="SemiBold"/>
+            <TextBlock><Run Text="Kişisel bakiye: "/><Run Text="{Binding TotalDebtOfSelectedCustomer, StringFormat='{}{0:N2} ₺'}" FontWeight="Bold"/></TextBlock>
+            <TextBlock Opacity="0.7"><Run Text="Aile toplamı (kişi + doğrudan yakınlar): "/><Run Text="{Binding FamilyTotalDebt, StringFormat='{}{0:N2} ₺'}"/></TextBlock>
+            <TextBlock><Run Text="Ödeme geçmişi puanı: "/><Run Text="{Binding SelectedCustomer.Score}"/></TextBlock>
+            <TextBlock Text="Bu müşterinin ödeme geçmişi puanı düşük." IsVisible="{Binding SelectedCustomerHasLowScore}" Foreground="#D64545"/>
+          </StackPanel>
+          <Button Grid.Column="1" Content="Müşteriyi kaldır" VerticalAlignment="Top" Command="{Binding ArchiveCustomerCommand}" CommandParameter="{Binding SelectedCustomer}"/>
+        </Grid>
+        <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" CornerRadius="6" Padding="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="4"><TextBlock Text="Tahsilat kaydet" FontWeight="SemiBold"/><TextBox Text="{Binding NewPaymentAmount}" PlaceholderText="Tutar (₺, ör. 125,50)"/><TextBlock Text="Ödeme en eski açık borçlardan düşülür." FontSize="11" Opacity="0.65"/></StackPanel>
+            <Button Grid.Column="1" Content="Tahsil et" Command="{Binding RecordPaymentCommand}" VerticalAlignment="Center"/>
+          </Grid>
         </Border>
-    </Panel>
+        <TabControl Grid.Row="2">
+          <TabItem Header="Borçlar">
+            <Grid RowDefinitions="*,Auto" RowSpacing="10" Margin="0,10,0,0">
+              <ListBox ItemsSource="{Binding Debts}">
+                <ListBox.ItemTemplate><DataTemplate x:DataType="vm:DebtItemViewModel">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,6">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="{Binding Description, TargetNullValue='Borç kaydı'}" FontWeight="SemiBold"/>
+                      <TextBlock><Run Text="İlk tutar: "/><Run Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}"/><Run Text=" · Kalan: "/><Run Text="{Binding Outstanding, StringFormat='{}{0:N2} ₺'}" FontWeight="Bold"/></TextBlock>
+                      <TextBlock Opacity="0.6" FontSize="12"><Run Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy}'}"/><Run Text=" · "/><Run Text="{Binding Status}"/></TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Kapat" IsEnabled="{Binding CanSettle}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SettleDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="2" Content="İptal" IsEnabled="{Binding CanVoid}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).VoidDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                  </Grid>
+                </DataTemplate></ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Grid.Row="1" Spacing="6">
+                <TextBlock Text="Yeni borç" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8"><TextBox Text="{Binding NewDebtAmount}" PlaceholderText="Tutar (₺, ör. 125,50)"/><TextBox Grid.Column="1" Text="{Binding NewDebtDescription}" PlaceholderText="Açıklama"/></Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><DatePicker SelectedDate="{Binding NewDebtDate}"/><Button Grid.Column="1" Content="Borç ekle" Command="{Binding AddDebtCommand}"/></Grid>
+              </StackPanel>
+            </Grid>
+          </TabItem>
+          <TabItem Header="Tahsilat geçmişi">
+            <ListBox ItemsSource="{Binding Payments}" Margin="0,10,0,0">
+              <ListBox.ItemTemplate><DataTemplate x:DataType="vm:PaymentItemViewModel">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,5">
+                  <StackPanel Spacing="3"><TextBlock Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" FontWeight="SemiBold"/><TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"/><TextBlock Text="{Binding Status}" Opacity="0.65"/></StackPanel>
+                  <Button Grid.Column="1" Content="Tahsilatı geri al" IsEnabled="{Binding CanReverse}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReversePaymentCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                </Grid>
+              </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+          </TabItem>
+          <TabItem Header="Yakınlar">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Margin="0,10,0,0">
+              <TextBlock Text="Yakınların bakiyeleri kişisel hesaba eklenmez; aile toplamında ayrıca gösterilir." TextWrapping="Wrap" Opacity="0.65"/>
+              <ItemsControl Grid.Row="1" ItemsSource="{Binding Relatives}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,6"><StackPanel><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Balance, StringFormat='{}{0:N2} ₺'}"/></StackPanel>
+                    <Button Grid.Column="1" Content="Bağı kaldır" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RemoveRelativeCommand}" CommandParameter="{Binding}"/>
+                  </Grid>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <ComboBox ItemsSource="{Binding AvailableRelativeOptions}" SelectedItem="{Binding SelectedRelativeToAdd}" PlaceholderText="Yakın seçin" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <Button Grid.Column="1" Content="Yakın ekle" Command="{Binding AddRelativeCommand}"/>
+              </Grid>
+            </Grid>
+          </TabItem>
+        </TabControl>
+      </Grid>
+    </Grid>
+  </Grid>
 </Window>
