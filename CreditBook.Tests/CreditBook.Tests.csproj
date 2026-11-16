@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="12.0.5" />
     <ProjectReference Include="../CreditBook.Core/CreditBook.Core.csproj" />
     <ProjectReference Include="../CreditBook.Storage/CreditBook.Storage.csproj" />
     <ProjectReference Include="../CreditBook.UI/CreditBook.UI.csproj" />

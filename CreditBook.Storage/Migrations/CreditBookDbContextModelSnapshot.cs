@@ -83,6 +83,9 @@ namespace CreditBook.Storage.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsPaid")
                         .HasColumnType("INTEGER");
 
@@ -92,11 +95,46 @@ namespace CreditBook.Storage.Migrations
                     b.Property<bool>("OverdueNotificationSent")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("VoidReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
 
                     b.ToTable("DebtRecords");
+                });
+
+            modelBuilder.Entity("CreditBook.Core.DueDateChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DebtRecordId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("NewDueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OldDueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DebtRecordId");
+
+                    b.ToTable("DueDateChanges");
                 });
 
             modelBuilder.Entity("CreditBook.Core.Payment", b =>
@@ -112,6 +150,9 @@ namespace CreditBook.Storage.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReversalReason")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ReversedAt")
@@ -176,6 +217,17 @@ namespace CreditBook.Storage.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("CreditBook.Core.DueDateChange", b =>
+                {
+                    b.HasOne("CreditBook.Core.DebtRecord", "DebtRecord")
+                        .WithMany()
+                        .HasForeignKey("DebtRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DebtRecord");
                 });
 
             modelBuilder.Entity("CreditBook.Core.Payment", b =>

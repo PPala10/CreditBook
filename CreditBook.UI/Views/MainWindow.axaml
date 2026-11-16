@@ -8,7 +8,7 @@
   <Grid RowDefinitions="Auto,Auto,Auto,*">
     <!-- A quiet application bar keeps the ledger itself in focus. -->
     <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="28,18">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10">
         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
           <Border Background="{StaticResource AccentBrush}" CornerRadius="11" Width="42" Height="42">
             <TextBlock Text="CB" Foreground="White" FontWeight="SemiBold" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -17,7 +17,8 @@
         </StackPanel>
         <Button Grid.Column="1" Classes="quiet" Content="Yenile" Command="{Binding RefreshCommand}" VerticalAlignment="Center"/>
         <Button Grid.Column="2" Content="Yedek al" Click="OnBackupClick" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"/>
-        <Button Grid.Column="3" Command="{Binding ToggleNotificationPanelCommand}" VerticalAlignment="Center" Background="#FFF8EB" BorderBrush="#F5E8C9" Foreground="#916316">
+        <Button Grid.Column="3" Content="Yedek / Drive" Click="OnBackupSettingsClick" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"/>
+        <Button Grid.Column="4" Command="{Binding ToggleNotificationPanelCommand}" VerticalAlignment="Center" Background="#FFF8EB" BorderBrush="#F5E8C9" Foreground="#916316">
           <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Geciken borçlar"/><Border Background="#F9E8BE" CornerRadius="5" Padding="6,1"><TextBlock Text="{Binding NotificationCount}" FontSize="11" FontWeight="SemiBold"/></Border></StackPanel>
         </Button>
       </Grid>
@@ -29,7 +30,7 @@
     </StackPanel>
     <Border Grid.Row="2" IsVisible="{Binding IsNotificationPanelOpen}" Background="#FFFBF2" BorderBrush="#F0E1BC" BorderThickness="1" CornerRadius="12" Padding="16" Margin="28,8,28,0" MaxHeight="160">
       <Grid RowDefinitions="Auto,*" RowSpacing="8">
-        <TextBlock Text="30 günü geçen açık borçlar" FontWeight="SemiBold" Foreground="#916316"/>
+        <TextBlock Text="Vadesi geçen açık borçlar" FontWeight="SemiBold" Foreground="#916316"/>
         <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding Notifications}">
           <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,4" Foreground="#7E683D"/></DataTemplate></ItemsControl.ItemTemplate>
         </ItemsControl></ScrollViewer>
@@ -43,7 +44,10 @@
             <TextBlock Text="Müşteriler" Classes="section"/>
             <Border Grid.Column="1" CornerRadius="6" Background="#F0F3F9" Padding="8,3"><TextBlock Text="{Binding Customers.Count}" FontSize="11" Foreground="#5F6E85"/></Border>
           </Grid>
-          <TextBox Grid.Row="1" Margin="16,0,16,16" Text="{Binding SearchText}" PlaceholderText="Ad veya telefon ara"/>
+          <StackPanel Grid.Row="1" Margin="16,0,16,16" Spacing="8">
+            <TextBox Text="{Binding SearchText}" PlaceholderText="Ad veya telefon ara"/>
+            <ComboBox ItemsSource="{Binding CustomerSortOptions}" SelectedItem="{Binding CustomerSort}" HorizontalAlignment="Stretch"/>
+          </StackPanel>
           <ListBox Grid.Row="2" Margin="8,0" ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}">
             <ListBox.ItemTemplate><DataTemplate x:DataType="core:CustomerSummary">
               <Grid ColumnDefinitions="36,*" ColumnSpacing="10">
@@ -110,17 +114,26 @@
               <TabItem Header="Borçlar">
                 <StackPanel Spacing="14" Margin="0,16,0,0">
                   <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Borç hareketleri" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Classes="caption"><Run Text="{Binding Debts.Count}"/><Run Text=" kayıt"/></TextBlock></Grid>
+                  <WrapPanel Orientation="Horizontal">
+                    <ComboBox ItemsSource="{Binding DebtFilterOptions}" SelectedItem="{Binding DebtFilter}" MinWidth="110" Margin="0,0,8,8"/>
+                    <ComboBox ItemsSource="{Binding DebtSortOptions}" SelectedItem="{Binding DebtSort}" MinWidth="160" Margin="0,0,8,8"/>
+                    <Button Content="Filtreyi temizle" Command="{Binding ClearDebtFiltersCommand}" Classes="quiet small"/>
+                  </WrapPanel>
+                  <WrapPanel><StackPanel Margin="0,0,12,8"><TextBlock Text="Borç tarihi · başlangıç" Classes="caption"/><CalendarDatePicker SelectedDate="{Binding FilterFrom}"/></StackPanel><StackPanel><TextBlock Text="Borç tarihi · bitiş" Classes="caption"/><CalendarDatePicker SelectedDate="{Binding FilterTo}"/></StackPanel></WrapPanel>
                   <ListBox ItemsSource="{Binding Debts}" MinHeight="110" MaxHeight="180">
                     <ListBox.ItemTemplate><DataTemplate x:DataType="vm:DebtItemViewModel">
                       <Border BorderBrush="#EDF0F6" BorderThickness="0,0,0,1" Padding="0,2,0,12">
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                           <StackPanel Spacing="7">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock Text="{Binding Description, TargetNullValue='Borç kaydı'}" ToolTip.Tip="{Binding Description}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><Border Grid.Column="1" Background="#F0F3F8" CornerRadius="4" Padding="7,2"><TextBlock Text="{Binding Status}" FontSize="10" Foreground="#5B6B84"/></Border></Grid>
                             <TextBlock FontSize="12"><Run Text="Kalan "/><Run Text="{Binding Outstanding, StringFormat='{}{0:N2} ₺'}" FontWeight="SemiBold"/><Run Text="   /   "/><Run Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" Foreground="#5B6B84"/></TextBlock>
                             <TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy}'}" Classes="caption" FontSize="10"/>
+                            <TextBlock Text="{Binding DueDate, StringFormat='Vade: {0:dd.MM.yyyy}'}" Classes="caption" FontSize="11"/>
+                            <TextBlock Text="{Binding VoidReason}" TextWrapping="Wrap" FontSize="11"/>
                           </StackPanel>
                           <Button Grid.Column="1" Classes="soft small" Content="Kapat" IsEnabled="{Binding CanSettle}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SettleDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
-                          <Button Grid.Column="2" Classes="quiet small" Content="İptal" IsEnabled="{Binding CanVoid}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).VoidDebtCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                          <Button Grid.Column="2" Classes="quiet small" Content="Vade" IsEnabled="{Binding CanChangeDue}" Click="OnChangeDueClick" VerticalAlignment="Center"/>
+                          <Button Grid.Column="3" Classes="quiet small" Content="İptal" IsEnabled="{Binding CanVoid}" Click="OnVoidDebtClick" VerticalAlignment="Center"/>
                         </Grid>
                       </Border>
                     </DataTemplate></ListBox.ItemTemplate>
@@ -129,7 +142,8 @@
                     <StackPanel Spacing="10">
                       <TextBlock Text="Yeni borç ekle" FontWeight="SemiBold" FontSize="12"/>
                       <Grid ColumnDefinitions="160,*" ColumnSpacing="10"><TextBox Text="{Binding NewDebtAmount}" PlaceholderText="Tutar · ₺" Background="White"/><TextBox Grid.Column="1" Text="{Binding NewDebtDescription}" PlaceholderText="Açıklama (isteğe bağlı)" Background="White"/></Grid>
-                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"><DatePicker SelectedDate="{Binding NewDebtDate}"/><Button Grid.Column="1" Classes="primary" Content="＋  Borç ekle" Command="{Binding AddDebtCommand}"/></Grid>
+                      <WrapPanel><StackPanel Margin="0,0,12,8"><TextBlock Text="Borç tarihi" Classes="caption"/><DatePicker SelectedDate="{Binding NewDebtDate}"/></StackPanel><StackPanel Margin="0,0,12,8"><TextBlock Text="Vade" Classes="caption"/><DatePicker SelectedDate="{Binding NewDebtDueDate}"/></StackPanel></WrapPanel>
+                      <Button Classes="primary" Content="＋  Borç ekle" Command="{Binding AddDebtCommand}" HorizontalAlignment="Right"/>
                     </StackPanel>
                   </Border>
                   <TextBlock Text="Tutarları 125,50 biçiminde girin. Kapanan kayıtlar hesap geçmişinde korunur." Classes="caption" FontSize="10" TextWrapping="Wrap"/>
@@ -142,13 +156,32 @@
                     <ListBox.ItemTemplate><DataTemplate x:DataType="vm:PaymentItemViewModel">
                       <Border BorderBrush="#EDF0F6" BorderThickness="0,0,0,1" Padding="0,4,0,14">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                          <StackPanel Spacing="6"><TextBlock Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" FontSize="18" FontWeight="SemiBold" Foreground="#347657"/><TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy · HH:mm}'}" Classes="caption"/><TextBlock Text="{Binding Status}" FontSize="11" Foreground="#5F6E85"/></StackPanel>
-                          <Button Grid.Column="1" Classes="quiet small" Content="Tahsilatı geri al" IsEnabled="{Binding CanReverse}" Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ReversePaymentCommand}" CommandParameter="{Binding}" VerticalAlignment="Center"/>
+                          <StackPanel Spacing="6"><TextBlock Text="{Binding Amount, StringFormat='{}{0:N2} ₺'}" FontSize="18" FontWeight="SemiBold" Foreground="#347657"/><TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy · HH:mm}'}" Classes="caption"/><TextBlock Text="{Binding Status}" FontSize="11" Foreground="#5F6E85"/><TextBlock Text="{Binding AllocationText}" TextWrapping="Wrap" FontSize="11"/><TextBlock Text="{Binding ReversalReason}" TextWrapping="Wrap" FontSize="11"/></StackPanel>
+                          <Button Grid.Column="1" Classes="quiet small" Content="Tahsilatı geri al" IsEnabled="{Binding CanReverse}" Click="OnReversePaymentClick" VerticalAlignment="Center"/>
                         </Grid>
                       </Border>
                     </DataTemplate></ListBox.ItemTemplate>
                   </ListBox>
                   <TextBlock Text="Geri alınan tahsilatlar silinmez; tarihçesi korunur ve bakiye yeniden hesaplanır." Classes="caption" TextWrapping="Wrap"/>
+                </StackPanel>
+              </TabItem>
+              <TabItem Header="Müşteri">
+                <StackPanel Spacing="12" Margin="0,16,0,0">
+                  <TextBlock Text="Müşteri bilgileri" FontWeight="SemiBold"/>
+                  <TextBox Text="{Binding EditCustomerName}" PlaceholderText="Ad soyad"/>
+                  <TextBox Text="{Binding EditCustomerPhone}" PlaceholderText="Telefon" MaxLength="11"/>
+                  <TextBox Text="{Binding EditCustomerNote}" PlaceholderText="Müşteri notları" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90"/>
+                  <Button Content="Bilgileri kaydet" Command="{Binding SaveCustomerCommand}" Classes="primary"/>
+                  <TextBlock Text="Vade değişiklikleri" FontWeight="SemiBold" Margin="0,12,0,0"/>
+                  <ItemsControl ItemsSource="{Binding DueDateHistory}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,5" FontSize="12"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </StackPanel>
+              </TabItem>
+              <TabItem Header="Ekstre">
+                <StackPanel Spacing="14" Margin="0,16,0,0">
+                  <TextBlock Text="Müşteri hesap ekstresi" FontWeight="SemiBold"/>
+                  <TextBlock Text="Tarih aralığındaki tüm hareketler, dönem başı ve dönem sonu bakiyesiyle çıkarılır. Liste filtreleri ekstreyi etkilemez." TextWrapping="Wrap" Classes="caption"/>
+                  <WrapPanel><StackPanel Margin="0,0,12,8"><TextBlock Text="Başlangıç" Classes="caption"/><DatePicker SelectedDate="{Binding StatementFrom}"/></StackPanel><StackPanel><TextBlock Text="Bitiş" Classes="caption"/><DatePicker SelectedDate="{Binding StatementTo}"/></StackPanel></WrapPanel>
+                  <WrapPanel><Button Content="CSV indir" Click="OnExportCsvClick" Margin="0,0,8,8"/><Button Content="PDF indir" Click="OnExportPdfClick" Margin="0,0,8,8"/><Button Content="Yazdır / PDF aç" Click="OnPrintClick"/></WrapPanel>
                 </StackPanel>
               </TabItem>
               <TabItem Header="Yakın hesapları">
@@ -169,7 +202,7 @@
               </TabItem>
             </TabControl>
           </Border>
-          <StackPanel Orientation="Horizontal" Spacing="7" Margin="3,0,0,0"><Border Background="#73A88A" Width="6" Height="6" CornerRadius="3" VerticalAlignment="Center"/><TextBlock Text="Kayıtlarınız bu cihazda saklanır." Classes="caption" FontSize="10"/></StackPanel>
+          <StackPanel Spacing="5" Margin="3,0,0,0"><TextBlock Text="Kayıtlarınız bu cihazda saklanır." Classes="caption" FontSize="10"/><TextBlock Text="{Binding BackupStatusText}" Classes="caption" FontSize="11" TextWrapping="Wrap"/></StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>

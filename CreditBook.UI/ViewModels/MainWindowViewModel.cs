@@ -17,6 +17,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private Ledger? _ledger;
     private bool _loadingSelection;
     private List<CustomerSummary> _allCustomers = new();
+    private List<DebtItemViewModel> _allDebts = new();
     public ObservableCollection<CustomerSummary> Customers { get; } = new();
     public ObservableCollection<CustomerSummary> Relatives { get; } = new();
     public ObservableCollection<CustomerSummary> AvailableRelativeOptions { get; } = new();
@@ -44,8 +45,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool SelectedCustomerHasLowScore => SelectedCustomer is { Score: < 50 };
     public int NotificationCount => Notifications.Count;
 
-    public MainWindowViewModel(Ledger ledger) : this(() => ledger) { }
-    public MainWindowViewModel(Func<Ledger> createLedger) => _createLedger = createLedger;
+    public MainWindowViewModel(Ledger ledger) : this(() => ledger, false) { }
+    public MainWindowViewModel(Func<Ledger> createLedger, bool enableBackups = true,
+        Func<Ledger, CreditBook.Storage.Backup.BackupService>? backupFactory = null)
+    { _createLedger = createLedger; _enableBackups = enableBackups; _backupFactory = backupFactory; }
     public Task InitializeAsync() => RefreshAsync();
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -66,9 +69,12 @@ public partial class MainWindowViewModel : ViewModelBase
             var id = SelectedCustomer?.Id;
             Customers.Clear();
             var text = SearchText.Trim();
-            foreach (var customer in _allCustomers.Where(c => text.Length == 0
+            var filtered = _allCustomers.Where(c => text.Length == 0
                 || c.Name.Contains(text, StringComparison.CurrentCultureIgnoreCase)
-                || (c.Phone?.Contains(text) ?? false))) Customers.Add(customer);
+                || (c.Phone?.Contains(text) ?? false));
+            filtered = CustomerSort == "Bakiye (yüksekten)" ? filtered.OrderByDescending(c => c.Balance).ThenBy(c => c.Name)
+                : CustomerSort == "Bakiye (düşükten)" ? filtered.OrderBy(c => c.Balance).ThenBy(c => c.Name) : filtered.OrderBy(c => c.Name);
+            foreach (var customer in filtered) Customers.Add(customer);
             SelectedCustomer = Customers.FirstOrDefault(c => c.Id == id);
             if (SelectedCustomer is null) ApplyAccount(null);
         }
@@ -81,7 +87,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (IsBusy) return;
         IsBusy = true;
         ErrorMessage = "";
-        try { await LoadAsync(SelectedCustomer?.Id); IsReady = true; }
+        try { await LoadAsync(SelectedCustomer?.Id); IsReady = true; ScheduleBackup(); }
         catch (Exception ex)
         {
             IsReady = false;
@@ -112,7 +118,7 @@ public partial class MainWindowViewModel : ViewModelBase
         finally { _loadingSelection = false; }
         Notifications.Clear();
         foreach (var n in state.overdue)
-            Notifications.Add($"{n.CustomerName}: {n.Outstanding:N2} ₺ kalan borç, 30 günü geçti ({n.Date:dd.MM.yyyy}).");
+            Notifications.Add($"{n.CustomerName}: {n.Outstanding:N2} ₺ kalan borcun vadesi geçti (borç: {n.Date:dd.MM.yyyy}).");
         OnPropertyChanged(nameof(NotificationCount));
     }
 
@@ -123,12 +129,19 @@ public partial class MainWindowViewModel : ViewModelBase
         FamilyTotalDebt = account?.FamilyBalance ?? 0;
         if (account is not null)
         {
-            foreach (var d in account.Debts) Debts.Add(new DebtItemViewModel(d));
+            _allDebts = account.Debts.Select(d => new DebtItemViewModel(d)).ToList();
+            ApplyDebtFilter();
             foreach (var p in account.Payments) Payments.Add(new PaymentItemViewModel(p));
             foreach (var r in account.Relatives) Relatives.Add(r);
             foreach (var c in _allCustomers.Where(c => c.Id != account.Customer.Id && !account.Relatives.Any(r => r.Id == c.Id)))
                 AvailableRelativeOptions.Add(c);
         }
+        else _allDebts.Clear();
+        DueDateHistory.Clear();
+        if (account is not null)
+            foreach (var change in account.DueDateChanges)
+                DueDateHistory.Add($"Borç #{change.DebtId}: {change.OldDueDate:dd.MM.yyyy} → {change.NewDueDate:dd.MM.yyyy} · {change.ChangedAt:dd.MM.yyyy HH:mm} · {change.Reason}");
+        ApplyCustomerEditor(account?.Customer);
         SelectedRelativeToAdd = null;
         OnPropertyChanged(nameof(SelectedCustomerHasLowScore));
     }
@@ -143,6 +156,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await Task.Run(() => action(_ledger!));
             onSuccess?.Invoke();
             await LoadAsync(selectedId);
+            ScheduleBackup();
         }
         catch (ArgumentException ex) { ErrorMessage = ex.Message; }
         catch (Exception ex)
@@ -183,8 +197,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private Task AddDebtAsync()
     {
         var customer = SelectedCustomer; var amount = NewDebtAmount; var description = NewDebtDescription; var date = NewDebtDate.Date;
-        return customer is null ? Task.CompletedTask : MutateAsync(l => l.AddDebt(customer.Id, ParseAmount(amount), description, date),
-            () => { NewDebtAmount = ""; NewDebtDescription = ""; NewDebtDate = DateTimeOffset.Now; });
+        var due = NewDebtDueDate.Date;
+        return customer is null ? Task.CompletedTask : MutateAsync(l => l.AddDebt(customer.Id, ParseAmount(amount), description, date, due),
+            () => { NewDebtAmount = ""; NewDebtDescription = ""; NewDebtDate = DateTimeOffset.Now; NewDebtDueDate = NewDebtDate.AddDays(30); });
     }
     [RelayCommand] private Task RecordPaymentAsync()
     {
@@ -192,8 +207,9 @@ public partial class MainWindowViewModel : ViewModelBase
         return customer is null ? Task.CompletedTask : MutateAsync(l => l.RecordPayment(customer.Id, ParseAmount(amount), DateTime.Now), () => NewPaymentAmount = "");
     }
     [RelayCommand] private Task SettleDebtAsync(DebtItemViewModel? item) => item is null ? Task.CompletedTask : MutateAsync(l => l.SettleDebt(item.Id));
-    [RelayCommand] private Task VoidDebtAsync(DebtItemViewModel? item) => item is null ? Task.CompletedTask : MutateAsync(l => l.VoidDebt(item.Id));
-    [RelayCommand] private Task ReversePaymentAsync(PaymentItemViewModel? item) => item is null ? Task.CompletedTask : MutateAsync(l => l.ReversePayment(item.Id));
+    [ObservableProperty] private string operationReason = "";
+    [RelayCommand] private Task VoidDebtAsync(DebtItemViewModel? item) => item is null ? Task.CompletedTask : MutateAsync(l => l.VoidDebt(item.Id, OperationReason), () => OperationReason = "");
+    [RelayCommand] private Task ReversePaymentAsync(PaymentItemViewModel? item) => item is null ? Task.CompletedTask : MutateAsync(l => l.ReversePayment(item.Id, OperationReason), () => OperationReason = "");
     [RelayCommand] private void ToggleNotificationPanel() => IsNotificationPanelOpen = !IsNotificationPanelOpen;
     public Task BackupAsync(string destination) => MutateAsync(l => l.Backup(destination), () => InfoMessage = "Yedek alındı: " + destination);
 }

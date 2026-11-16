@@ -8,6 +8,7 @@
 *.db
 *.db-shm
 *.db-wal
+*.writer.lock
 *.sqlite
 *.sqlite3
 .env

@@ -8,6 +8,7 @@ namespace CreditBook.UI;
 
 public partial class App : Application
 {
+    private CreditBook.Storage.LedgerSession? _session;
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -19,8 +20,9 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(() => new CreditBook.Storage.Ledger(CreditBook.Storage.CreditBookDbContext.GetDatabasePath())),
+                DataContext = new MainWindowViewModel(() => (_session ??= new CreditBook.Storage.LedgerSession(CreditBook.Storage.CreditBookDbContext.GetDatabasePath())).Ledger),
             };
+            desktop.Exit += (_,_) => _session?.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();

@@ -7,5 +7,10 @@
   <ItemGroup>
     <ProjectReference Include="../CreditBook.Core/CreditBook.Core.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+    <EmbeddedResource Include="Fonts/NotoSans-Regular.ttf" />
+    <Content Include="Fonts/OFL.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

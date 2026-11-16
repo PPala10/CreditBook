@@ -28,6 +28,9 @@ public class DebtRecord
     public decimal Amount { get; set; }
     public string? Description { get; set; }
     public DateTime Date { get; set; }
+    public DateTime DueDate { get; set; }
+    public DateTime? VoidedAt { get; set; }
+    public string? VoidReason { get; set; }
     // Retained for legacy settled debts whose individual payments were never recorded.
     public bool IsPaid { get; set; }
     public bool OverdueNotificationSent { get; set; }
@@ -38,6 +41,7 @@ public class DebtRecord
 
 public class Payment
 {
+    public string? ReversalReason { get; set; }
     public DateTime? ReversedAt { get; set; }
     public int Id { get; set; }
     public int CustomerId { get; set; }
@@ -58,11 +62,29 @@ public class PaymentAllocation
 }
 
 public record Allocation(int DebtId, decimal Amount);
-public record CustomerSummary(int Id, string Name, string? Phone, int Score, decimal Balance);
+public class DueDateChange
+{
+    public int Id { get; set; }
+    public int DebtRecordId { get; set; }
+    public DebtRecord? DebtRecord { get; set; }
+    public DateTime OldDueDate { get; set; }
+    public DateTime NewDueDate { get; set; }
+    public DateTime ChangedAt { get; set; }
+    public string Reason { get; set; } = "";
+}
+
+public record CustomerSummary(int Id, string Name, string? Phone, int Score, decimal Balance, string? Note = null);
 public record DebtSummary(int Id, int CustomerId, string OwnerName, decimal Amount,
-    decimal Outstanding, string? Description, DateTime Date, bool IsVoided, bool CanVoid);
-public record PaymentSummary(int Id, decimal Amount, DateTime Date, DateTime? ReversedAt);
+    decimal Outstanding, string? Description, DateTime Date, bool IsVoided, bool CanVoid,
+    DateTime DueDate = default, string? VoidReason = null, DateTime? VoidedAt = null);
+public record PaymentDistribution(int DebtId, string? Description, decimal Amount);
+public record PaymentSummary(int Id, decimal Amount, DateTime Date, DateTime? ReversedAt,
+    string? ReversalReason = null, IReadOnlyList<PaymentDistribution>? Distributions = null)
+{
+    public IReadOnlyList<PaymentDistribution> Allocations => Distributions ?? Array.Empty<PaymentDistribution>();
+}
+public record DueDateChangeSummary(int DebtId, DateTime OldDueDate, DateTime NewDueDate, DateTime ChangedAt, string Reason);
 public record AccountSummary(CustomerSummary Customer, IReadOnlyList<DebtSummary> Debts,
     IReadOnlyList<PaymentSummary> Payments, IReadOnlyList<CustomerSummary> Relatives,
-    decimal FamilyBalance);
+    decimal FamilyBalance, IReadOnlyList<DueDateChangeSummary> DueDateChanges);
 public record OverdueSummary(int DebtId, string CustomerName, decimal Outstanding, DateTime Date);

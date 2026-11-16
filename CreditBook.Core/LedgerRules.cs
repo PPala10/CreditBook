@@ -33,15 +33,15 @@ public static class LedgerRules
         var score = 100;
         foreach (var debt in debts.Where(d => !d.IsVoided))
         {
-            var due = debt.Date.AddDays(30);
+            var due = debt.DueDate == default ? debt.Date.Date.AddDays(30) : debt.DueDate.Date;
             if (debt.Outstanding > 0)
             {
-                if (now > due) score -= 10;
+                if (now.Date > due) score -= 10;
             }
             else if (debt.Allocations.Count > 0)
             {
                 var settled = debt.Allocations.Where(a => a.Payment?.ReversedAt is null).Max(a => a.Payment?.Date ?? debt.Date);
-                score += settled > due ? -25 : 5;
+                score += settled.Date > due ? -25 : 5;
             }
         }
         return Math.Clamp(score, 0, 100);

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CreditBook.Storage;
 
 /// <summary>Owns ledger transactions and returns detached account snapshots to callers.</summary>
-public sealed class Ledger
+public sealed partial class Ledger
 {
     private readonly DbContextOptions<CreditBookDbContext> _options;
     private readonly TimeProvider _clock;
@@ -66,13 +66,15 @@ public sealed class Ledger
         return true;
     });
 
-    public int AddDebt(int customerId, decimal amount, string? description, DateTime date) => Write(db =>
+    public int AddDebt(int customerId, decimal amount, string? description, DateTime date, DateTime? dueDate = null) => Write(db =>
     {
         ActiveCustomer(db, customerId);
         LedgerRules.ValidateAmount(amount);
         ValidateDate(date);
+        var due = (dueDate ?? date.Date.AddDays(30)).Date;
+        if (due < date.Date) throw new ArgumentException("Vade borç tarihinden önce olamaz.");
         var debt = new DebtRecord { CustomerId = customerId, Amount = amount,
-            Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(), Date = date };
+            Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(), Date = date, DueDate = due };
         db.DebtRecords.Add(debt);
         db.SaveChanges();
         return debt.Id;
@@ -111,13 +113,15 @@ public sealed class Ledger
         return true;
     });
 
-    public void ReversePayment(int id) => Write(db =>
+    public void ReversePayment(int id, string reason) => Write(db =>
     {
         var payment = db.Payments.Include(p => p.Allocations).ThenInclude(a => a.DebtRecord)
             .ThenInclude(d => d!.Allocations).ThenInclude(a => a.Payment)
             .SingleOrDefault(p => p.Id == id) ?? throw new ArgumentException("Tahsilat bulunamadı.");
         if (payment.ReversedAt.HasValue) return false;
+        reason = RequiredReason(reason);
         payment.ReversedAt = Now;
+        payment.ReversalReason = reason;
         foreach (var allocation in payment.Allocations)
         {
             var debt = allocation.DebtRecord!;
@@ -126,12 +130,14 @@ public sealed class Ledger
         return true;
     });
 
-    public void VoidDebt(int id) => Write(db =>
+    public void VoidDebt(int id, string reason) => Write(db =>
     {
         var debt = Debts(db).SingleOrDefault(d => d.Id == id)
             ?? throw new ArgumentException("Borç bulunamadı.");
         if (!LedgerRules.CanVoid(debt))
             throw new ArgumentException("Yalnızca tahsilat geçmişi olmayan açık borç iptal edilebilir.");
+        debt.VoidReason = RequiredReason(reason);
+        debt.VoidedAt = Now;
         debt.IsVoided = true;
         return true;
     });
@@ -158,7 +164,7 @@ public sealed class Ledger
         var debts = Debts(db).AsNoTracking().ToList().ToLookup(d => d.CustomerId);
         return db.Customers.AsNoTracking().Where(c => !c.IsArchived).OrderBy(c => c.Name).ToList()
             .Select(c => new CustomerSummary(c.Id, c.Name, c.Phone, LedgerRules.Score(debts[c.Id], Now),
-                debts[c.Id].Sum(d => d.Outstanding))).ToList();
+                debts[c.Id].Sum(d => d.Outstanding), c.Note)).ToList();
     }
 
     public IReadOnlyList<CustomerSummary> GetCustomers()
@@ -178,17 +184,22 @@ public sealed class Ledger
         var relativeIds = links.Select(r => r.CustomerId == id ? r.RelativeId : r.CustomerId).ToHashSet();
         var relatives = customers.Where(c => relativeIds.Contains(c.Id)).ToList();
         var debts = Debts(db).AsNoTracking().Where(d => d.CustomerId == id).OrderBy(d => d.Date).ThenBy(d => d.Id).ToList()
-            .Select(d => new DebtSummary(d.Id, id, customer.Name, d.Amount, d.Outstanding, d.Description, d.Date, d.IsVoided, LedgerRules.CanVoid(d))).ToList();
-        var payments = db.Payments.AsNoTracking().Where(p => p.CustomerId == id).OrderByDescending(p => p.Date)
-            .Select(p => new PaymentSummary(p.Id, p.Amount, p.Date, p.ReversedAt)).ToList();
-        return new AccountSummary(customer, debts, payments, relatives, customer.Balance + relatives.Sum(r => r.Balance));
+            .Select(d => new DebtSummary(d.Id, id, customer.Name, d.Amount, d.Outstanding, d.Description, d.Date, d.IsVoided, LedgerRules.CanVoid(d), d.DueDate, d.VoidReason, d.VoidedAt)).ToList();
+        var payments = db.Payments.Include(p => p.Allocations).ThenInclude(a => a.DebtRecord)
+            .AsNoTracking().Where(p => p.CustomerId == id).OrderByDescending(p => p.Date).ThenByDescending(p => p.Id).ToList()
+            .Select(p => new PaymentSummary(p.Id, p.Amount, p.Date, p.ReversedAt, p.ReversalReason,
+                p.Allocations.Select(a => new PaymentDistribution(a.DebtRecordId, a.DebtRecord!.Description, a.Amount)).ToList())).ToList();
+        var changes = db.DueDateChanges.AsNoTracking().Where(c => c.DebtRecord!.CustomerId == id)
+            .OrderByDescending(c => c.ChangedAt).ThenByDescending(c => c.Id)
+            .Select(c => new DueDateChangeSummary(c.DebtRecordId, c.OldDueDate, c.NewDueDate, c.ChangedAt, c.Reason)).ToList();
+        return new AccountSummary(customer, debts, payments, relatives, customer.Balance + relatives.Sum(r => r.Balance), changes);
     }
 
     public IReadOnlyList<OverdueSummary> GetOverdue()
     {
         using var db = Open();
-        var cutoff = Now.AddDays(-30);
-        return Debts(db).Include(d => d.Customer).AsNoTracking().Where(d => !d.IsVoided && d.Date < cutoff)
+        var today = Now.Date;
+        return Debts(db).Include(d => d.Customer).AsNoTracking().Where(d => !d.IsVoided && d.DueDate < today)
             .ToList().Where(d => d.Outstanding > 0)
             .Select(d => new OverdueSummary(d.Id, d.Customer!.Name, d.Outstanding, d.Date)).ToList();
     }

@@ -12,6 +12,7 @@ public class CreditBookDbContext : DbContext
     public DbSet<CustomerRelative> CustomerRelatives => Set<CustomerRelative>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
+    public DbSet<DueDateChange> DueDateChanges => Set<DueDateChange>();
 
     public CreditBookDbContext()
     {
@@ -34,6 +35,7 @@ public class CreditBookDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<DebtRecord>().Ignore(d => d.Outstanding);
+        modelBuilder.Entity<DueDateChange>().HasOne(c => c.DebtRecord).WithMany().HasForeignKey(c => c.DebtRecordId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Payment>().HasOne(p => p.Customer).WithMany().HasForeignKey(p => p.CustomerId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<PaymentAllocation>().HasOne(a => a.Payment).WithMany(p => p.Allocations).HasForeignKey(a => a.PaymentId).OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<PaymentAllocation>().HasOne(a => a.DebtRecord).WithMany(d => d.Allocations).HasForeignKey(a => a.DebtRecordId).OnDelete(DeleteBehavior.Restrict);

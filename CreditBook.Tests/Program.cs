@@ -42,21 +42,21 @@ Test("Family total is separate; unlink does not delete customer", () => {
 });
 Test("Settlement is idempotent and cannot erase payment history", () => {
  var l=Open("settle");var c=l.AddCustomer("Ali","05551234567");var d=l.AddDebt(c,10,null,DateTime.Today);l.SettleDebt(d);l.SettleDebt(d);
- Equal(1,l.GetAccount(c).Payments.Count);Reject(()=>l.VoidDebt(d));Reject(()=>l.ArchiveCustomer(c));
+ Equal(1,l.GetAccount(c).Payments.Count);Reject(()=>l.VoidDebt(d,"Test iptali"));Reject(()=>l.ArchiveCustomer(c));
 });
 Test("SQLite backup can reopen while source ledger is in use", () => {
  var l=Open("backup");var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,19.99m,null,DateTime.Today);var target=Path.Combine(folder,"copy.db");l.Backup(target);
  var copy=new Ledger(target);Equal(19.99m,copy.GetAccount(c).Customer.Balance);
 });
 Test("Voided uncollected debt is retained and excluded from balance", () => {
- var l=Open("void");var c=l.AddCustomer("Ali","05551234567");var d=l.AddDebt(c,10,null,DateTime.Today);l.VoidDebt(d);
+ var l=Open("void");var c=l.AddCustomer("Ali","05551234567");var d=l.AddDebt(c,10,null,DateTime.Today);l.VoidDebt(d,"Test iptali");
  Equal(0m,l.GetAccount(c).Customer.Balance);Equal(true,l.GetAccount(c).Debts.Single().IsVoided);
 });
 Test("Link is symmetric and unique", () => {var l=Open("links");var a=l.AddCustomer("Ali","05551234567");var b=l.AddCustomer("Ayşe","05551234568");l.LinkRelative(a,b);l.LinkRelative(b,a);Equal(1,l.GetAccount(a).Relatives.Count);Reject(()=>l.LinkRelative(a,a));});
 Test("Customers with open debt cannot be archived", () => {var l=Open("archive");var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,10,null,DateTime.Today);Reject(()=>l.ArchiveCustomer(c));});
 Test("Reversing a payment preserves history and reopens original debts", () => {
  var l=Open("reverse");var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,100,null,DateTime.Today);var payment=l.RecordPayment(c,100,DateTime.Today);
- l.ReversePayment(payment);l.ReversePayment(payment);var a=l.GetAccount(c);Equal(100m,a.Customer.Balance);Equal(1,a.Payments.Count);Equal(true,a.Payments[0].ReversedAt.HasValue);
+ l.ReversePayment(payment,"Test düzeltmesi");l.ReversePayment(payment,"Test düzeltmesi");var a=l.GetAccount(c);Equal(100m,a.Customer.Balance);Equal(1,a.Payments.Count);Equal(true,a.Payments[0].ReversedAt.HasValue);
  l.RecordPayment(c,25,DateTime.Today);Equal(75m,l.GetAccount(c).Customer.Balance);
 });
 Test("Viewmodel records customer-level payment and shows separate family total", () => {
@@ -118,10 +118,72 @@ foreach(var nullableName in new[]{true,false}) Test(nullableName ? "Same-column 
  using var verify=new Microsoft.Data.Sqlite.SqliteConnection("Data Source="+path);verify.Open();using var q=verify.CreateCommand();q.CommandText="SELECT COUNT(*) FROM sqlite_master WHERE name='__EFMigrationsHistory'";Equal(0L,(long)q.ExecuteScalar()!);
 });
 Test("Cancellation eligibility matches storage after payment reversal", () => {
- var l=Open("cancel-eligibility");var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,100,null,DateTime.Today);var payment=l.RecordPayment(c,20,DateTime.Today);l.ReversePayment(payment);
- var debt=l.GetAccount(c).Debts.Single();var row=new CreditBook.UI.ViewModels.DebtItemViewModel(debt);Equal(false,row.CanVoid);Reject(()=>l.VoidDebt(debt.Id));
+ var l=Open("cancel-eligibility");var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,100,null,DateTime.Today);var payment=l.RecordPayment(c,20,DateTime.Today);l.ReversePayment(payment,"Test düzeltmesi");
+ var debt=l.GetAccount(c).Debts.Single();var row=new CreditBook.UI.ViewModels.DebtItemViewModel(debt);Equal(false,row.CanVoid);Reject(()=>l.VoidDebt(debt.Id,"Test iptali"));
 });
+Test("Restore validates candidate and keeps a safety copy", () => {
+ var original=Open("restore-target");var c=original.AddCustomer("Ali","05551234567");original.AddDebt(c,10,null,DateTime.Today);
+ var source=Open("restore-source");var s=source.AddCustomer("Ayşe","05551234568");source.AddDebt(s,75,null,DateTime.Today);
+ var path=Path.Combine(folder,"restore-source.db");var preview=DatabaseRecovery.Inspect(path);Equal(1,preview.CustomerCount);
+ var safety=DatabaseRecovery.Restore(original.DatabasePath,path);Equal(75m,new Ledger(original.DatabasePath).GetCustomers().Single().Balance);Equal(10m,new Ledger(safety).GetCustomers().Single().Balance);
+ var bad=Path.Combine(folder,"bad-restore.db");File.WriteAllText(bad,"invalid");
+ try{DatabaseRecovery.Restore(original.DatabasePath,bad);throw new Exception("Accepted invalid backup");}catch(ArgumentException){}
+ Equal(75m,new Ledger(original.DatabasePath).GetCustomers().Single().Balance);
+ var foreign=Path.Combine(folder,"foreign.db");
+ using(var connection=new Microsoft.Data.Sqlite.SqliteConnection("Data Source="+foreign)) {connection.Open();using var command=connection.CreateCommand();command.CommandText="CREATE TABLE OtherApp (Id INTEGER PRIMARY KEY)";command.ExecuteNonQuery();}
+ Reject(()=>DatabaseRecovery.Restore(original.DatabasePath,foreign));Equal(75m,new Ledger(original.DatabasePath).GetCustomers().Single().Balance);
+});
+Test("Only one desktop session may write a ledger", () => {
+ var path=Path.Combine(folder,"session.db");
+ using(var first=new LedgerSession(path)) {
+  try {using var second=new LedgerSession(path);throw new Exception("Concurrent desktop session allowed");}catch(IOException){}
+ }
+ using var reopened=new LedgerSession(path);Equal(0,reopened.Ledger.GetCustomers().Count);
+});
+Test("Debt filters and sorting preserve full account totals and unsaved customer edits", () => {
+ var l=Open("debt-filters");var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,30,"Eski",DateTime.Today.AddDays(-40));l.AddDebt(c,70,"Yeni",DateTime.Today);
+ var vm=new CreditBook.UI.ViewModels.MainWindowViewModel(l);vm.InitializeAsync().GetAwaiter().GetResult();vm.DebtFilter="Gecikmiş";
+ Equal(1,vm.Debts.Count);Equal(100m,vm.TotalDebtOfSelectedCustomer);vm.EditCustomerNote="Taslak";vm.RefreshAsync().GetAwaiter().GetResult();Equal("Taslak",vm.EditCustomerNote);
+ vm.DebtFilter="Tümü";vm.DebtSort="Tutar (yüksekten)";Equal(70m,vm.Debts.First().Amount);vm.FilterFrom=DateTime.Today;Equal(1,vm.Debts.Count);Equal(100m,vm.TotalDebtOfSelectedCustomer);
+});
+Test("Customer editing preserves identity history and rejects duplicate phones", () => {
+ var l=Open("edit");var c=l.AddCustomer("Ali","05551234567");l.AddCustomer("Ayşe","05551234568");l.AddDebt(c,100,null,DateTime.Today);
+ l.UpdateCustomer(c,"Ali Veli","05551234569","Kapı no 5");var a=l.GetAccount(c);
+ Equal(c,a.Customer.Id);Equal("Ali Veli",a.Customer.Name);Equal("Kapı no 5",a.Customer.Note);Equal(100m,a.Customer.Balance);
+ Reject(()=>l.UpdateCustomer(c,"Ali","05551234568",null));Equal("05551234569",l.GetAccount(c).Customer.Phone);
+});
+Test("Due date boundary and history use calendar days", () => {
+ var l=Open("due");var c=l.AddCustomer("Ali","05551234567");var d=l.AddDebt(c,100,null,DateTime.Today.AddDays(-40),DateTime.Today);
+ Equal(0,l.GetOverdue().Count);Equal(100,l.GetAccount(c).Customer.Score);
+ l.ChangeDueDate(d,DateTime.Today.AddDays(-1),"Müşteriyle görüşüldü");var a=l.GetAccount(c);
+ Equal(1,l.GetOverdue().Count);Equal(90,a.Customer.Score);Equal(1,a.DueDateChanges.Count);
+ Equal(DateTime.Today,a.DueDateChanges[0].OldDueDate);Reject(()=>l.ChangeDueDate(d,DateTime.Today," "));
+});
+Test("Statement preserves payment in original period and dates reversal separately", () => {
+ var time=new MutableClock(new DateTimeOffset(2026,1,10,12,0,0,TimeSpan.Zero));
+ var l=new Ledger(Path.Combine(folder,"statement.db"),time);var c=l.AddCustomer("Ali","05551234567");l.AddDebt(c,1000,"Satış",new DateTime(2026,1,1));
+ var p=l.RecordPayment(c,400,new DateTime(2026,1,10));time.Value=new DateTimeOffset(2026,2,5,12,0,0,TimeSpan.Zero);l.ReversePayment(p,"Yanlış tahsilat");
+ var jan=l.GetStatement(c,new DateTime(2026,1,1),new DateTime(2026,1,31));Equal(600m,jan.ClosingBalance);Equal(2,jan.Rows.Count);
+ var feb=l.GetStatement(c,new DateTime(2026,2,1),new DateTime(2026,2,28));Equal(600m,feb.OpeningBalance);Equal(1000m,feb.ClosingBalance);Equal(400m,feb.Rows.Single().Debit);
+ Equal("Yanlış tahsilat",l.GetAccount(c).Payments.Single().ReversalReason);Equal(1,l.GetAccount(c).Payments.Single().Allocations.Count);
+});
+Test("Cancellation is dated and reason retained without rewriting historical balance", () => {
+ var time=new MutableClock(new DateTimeOffset(2026,2,5,12,0,0,TimeSpan.Zero));var l=new Ledger(Path.Combine(folder,"void-dated.db"),time);
+ var c=l.AddCustomer("Ali","05551234567");var d=l.AddDebt(c,50,null,new DateTime(2026,1,1));Reject(()=>l.VoidDebt(d,""));l.VoidDebt(d,"Mükerrer kayıt");
+ Equal(50m,l.GetStatement(c,new DateTime(2026,1,1),new DateTime(2026,1,31)).ClosingBalance);
+ Equal(0m,l.GetStatement(c,new DateTime(2026,2,1),new DateTime(2026,2,28)).ClosingBalance);Equal("Mükerrer kayıt",l.GetAccount(c).Debts.Single().VoidReason);
+});
+ExportTests.Run(Test);
+BackupTests.Run(Test);
+DesktopTests.Run(Test);
 Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
 Directory.Delete(folder,true);
 Console.WriteLine($"Failures: {failures}");
 return failures == 0 ? 0 : 1;
+
+sealed class MutableClock(DateTimeOffset value) : TimeProvider
+{
+ public DateTimeOffset Value {get;set;}=value;
+ public override DateTimeOffset GetUtcNow()=>Value;
+ public override TimeZoneInfo LocalTimeZone=>TimeZoneInfo.Utc;
+}
