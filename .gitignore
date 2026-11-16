@@ -3,6 +3,7 @@
 .vs/
 .idea/
 .DS_Store
+.superpowers/
 *.user
 *.suo
 *.db
